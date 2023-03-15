@@ -54,6 +54,16 @@ doc.ready(() => {
                                         'foo should be [object Object]',
                                     ),
                                 );
+
+                                let errorResponseOffline;
+                                const storageGuestOffline = createStorageGuest('https://notexistingpage12321.com', null, 2000);
+                                storageGuestOffline.get('buz', (error, data) => {
+                                    console.log('8. buz shoul respond error in 2000ms: ', { error, data });
+                                    errorResponseOffline = error;
+                                })
+                                setTimeout(() => {
+                                    crel(instructions, crel('div', { style: `color:${errorResponseOffline ? 'green' : 'red'}` }, 'buz shoul respond error in 2000ms'));
+                                }, 2500)
                             });
                         });
                     });

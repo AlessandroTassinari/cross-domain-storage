@@ -6,13 +6,14 @@ function createId() {
     return prefix + Date.now();
 }
 
-module.exports = function storageGuest(source, parent) {
+module.exports = function storageGuest(source, parent, iframeTimeout) {
     parent = parent || document.body;
 
     let contentWindow;
     let callbacks = {};
     const sessionRequests = [];
     let connected = false;
+    let aborted = false;
     let closed = true;
     let connectedTimeout;
     let isLoaded = false;
@@ -34,6 +35,9 @@ module.exports = function storageGuest(source, parent) {
         window.addEventListener('message', handleMessage);
 
         checkConnected();
+        if (iframeTimeout) {
+            setIframeTimeout();
+        }
     }
 
     openStorage();
@@ -71,6 +75,11 @@ module.exports = function storageGuest(source, parent) {
     function message(method, key, value, callback) {
         if (closed) {
             openStorage();
+        }
+
+        if (aborted) {
+            callback('Connection aborted');
+            return
         }
 
         if (!connected && method !== 'connect') {
@@ -113,7 +122,7 @@ module.exports = function storageGuest(source, parent) {
     }
 
     function checkConnected() {
-        if (connected) {
+        if (connected || aborted) {
             clearTimeout(connectedTimeout);
             while (sessionRequests.length) {
                 message(...sessionRequests.pop());
@@ -125,6 +134,15 @@ module.exports = function storageGuest(source, parent) {
         message('connect');
 
         connectedTimeout = setTimeout(checkConnected, 125);
+    }
+
+    function setIframeTimeout() {
+        setTimeout(() => {
+            if (!connected) {
+                aborted = true;
+                iframe.src = 'about:blank';
+            }
+        }, iframeTimeout);
     }
 
     return {
